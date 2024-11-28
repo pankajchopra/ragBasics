@@ -1,4 +1,5 @@
 import os
+import ast
 import faiss
 import tensorflow_hub as hub
 import google.generativeai as genai
@@ -84,45 +85,52 @@ def get_chunk_by_index(_indexPath, indices, textDataPath="chunks.txt"):
 def perform_rag_with_gemini(query, context, _geminiModel):
     # Prepare the payload for Gemini Pro
     payload = {
-        "contents": [
-                        {
-                            "role": "user",
-                            "parts": [
-                                {
-                                    "text": query
-                                }
-                            ]
-                        }
-                    ],
-        "systemInstruction": {
-            "role": "system",
-            "parts": [
-                        {
-                            "text": "Answer as concisely as possible"
-                         },
-                        {
-                            "text": "\n".join(context)
-                        }
-                    ]
-        },
-        "generationConfig": {
-            "temperature": 0.7,
-            "maxOutputTokens": 256,
-            "topP": 0.8,
-            "topK": 40,
-            "stopSequences": [],
-        },
-        "labels": {
-            "type": "rag",
-            "filetype": "pdf"
-        }
+                "text": query + "\n" + "\n".join(context)
+
+        # "systemInstruction": {
+        #     "role": "system",
+        #     "parts": [
+        #                 {
+        #                     "text": "Answer as concisely as possible in less than 256 tokens."
+        #                  },
+        #                 {
+        #                     "text": "\n".join(context)
+        #                 }
+        #             ]
+        # },
+        # "tools": [{}],
+        # "generationConfig": {
+        #     "temperature": 0.7,
+        #     "maxOutputTokens": 256,
+        #     "topP": 0.8,
+        #     "topK": 40,
+        #     "stopSequences": [],
+        # },
+        # "labels": {
+        #     "type": "rag",
+        #     "filetype": "pdf"
+        # }
     }
+    if is_valid_dict_string(payload):
+        # Generate response
+        # response = _geminiModel.generate_content(query+"\n"+"\n".join(context))
+        response = _geminiModel.generate_content(payload)
+        return response.text
+    else:
+        print("Error: Context is not a dictionary.")
 
-    # Generate response
-    # response = _geminiModel.generate_content(payload)
-    response = _geminiModel.generate_content(query+"\n"+"\n".join(context))
-    return response.text
+    # response = _geminiModel.generate_content(query+"\n"+"\n".join(context))
+    return "Error: Context is not a dictionary."
 
+
+def is_valid_dict_string(string):
+    try:
+
+        # Check if the result is a dictionary
+        return isinstance(string, dict)
+    except (ValueError, SyntaxError):
+        # If evaluation fails, the string is not a valid dictionary
+        return False
 
 
 def run_query_simulation_with_gemini(indexPath, textData_path, geminiModel):
