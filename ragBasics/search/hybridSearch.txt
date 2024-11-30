@@ -1,0 +1,78 @@
+from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.vectorstores import FAISS
+from langchain.document_loaders import TextLoader
+from langchain.search import FAISSVectorSearch
+
+# Load and preprocess your text data
+loader = TextLoader("your_documents.txt")
+documents = loader.load()
+
+# Create embeddings
+embeddings = OpenAIEmbeddings()
+docsearch = FAISS.from_documents(documents, embeddings)
+
+
+# Perform hybrid search
+def hybrid_search(query):
+    # Keyword-based search (e.g., using Elasticsearch or Lucene)
+    keyword_results = keyword_search(query)  # Implement keyword search logic
+
+    # Semantic search
+    vector_results = docsearch.similarity_search(query)
+
+    # Combine results (e.g., using a weighted scoring mechanism)
+    combined_results = combine_results(keyword_results, vector_results)
+
+    return combined_results
+
+
+def keyword_search(text, query_words):
+    """
+    Performs a simple keyword search on the given text.
+
+    Args:
+      text: The text to search.
+      query_words: A list of query words.
+
+    Returns:
+      A list of matching sentences.
+    """
+
+    matches = []
+    for sentence in text.split('\n'):
+        for word in query_words:
+            if word.lower() in sentence.lower():
+                matches.append(sentence)
+                break
+    return matches
+
+
+def rank_results(results, query):
+  """
+  Ranks search results based on keyword match and semantic similarity.
+
+  Args:
+    results: A list of tuples, where each tuple contains a document and its score.
+    query: The user query.
+
+  Returns:
+    A list of ranked documents.
+  """
+
+    ranked_results = []
+    for doc, score in results:
+        # Calculate keyword match score
+        keyword_score = sum(1 for word in query.split() if word in doc.page_content.lower())
+
+        # Calculate semantic similarity score (assuming you have embeddings)
+        query_embedding = model.encode(query)
+        doc_embedding = model.encode(doc.page_content)
+        semantic_score = cosine_similarity([query_embedding], [doc_embedding])[0][0]
+
+        # Combine scores (adjust weights as needed)
+        combined_score = keyword_score + semantic_score
+
+        ranked_results.append((doc, combined_score))
+
+        ranked_results.sort(key=lambda x: x[1], reverse=True)
+        return [doc for doc, _ in ranked_results]
